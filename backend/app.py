@@ -6,12 +6,18 @@ import datetime
 import uuid  # Import the uuid module
 from functools import wraps
 import mongoengine as me
-from mongoengine import Document, StringField, IntField, DateTimeField, connect, disconnect_all, DoesNotExist
+from mongoengine import Document, StringField, IntField, DateTimeField, connect, disconnect_all, DoesNotExist, ListField
 
 app = Flask(__name__)
 
 # Configure CORS properly to accept requests from your React app
-CORS(app, resources={r"/*": {"origins": "http://localhost:5173", "supports_credentials": True}})
+CORS(app, 
+     resources={r"/*": {
+         "origins": ["http://localhost:5173"],
+         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+         "allow_headers": ["Content-Type", "Authorization", "x-auth-token"]
+     }},
+     supports_credentials=True)
 
 # Configure MongoDB - Make sure this is set before initializing PyMongo
 mongo_uri = "mongodb+srv://bossutkarsh30:YOCczedaElKny6Dd@cluster0.gixba.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
@@ -41,12 +47,22 @@ class Patient(Document):
 
 # Define KnownPerson model
 class KnownPerson(Document):
-    patient_id = StringField()
     name = StringField()
-    relationship = StringField()
+    known_person_id = StringField()
+    patient_id = StringField()
+    image_path = StringField()
+    face_encoding = ListField()
     # Add other fields as needed
     
     meta = {'collection': 'known_person'}
+    
+    def to_json(self):
+        return {
+            'id': str(self.id),
+            'patient_id': self.patient_id,
+            'name': self.name,
+            'known_person_id': self.known_person_id
+        }
 
 # Add a route to test MongoDB connection
 @app.route('/api/test', methods=['GET'])
@@ -83,6 +99,23 @@ def token_required(f):
         return f(current_user_id, *args, **kwargs)
 
     return decorated
+
+# Add OPTIONS handlers for endpoints to fix CORS issues
+@app.route('/api/known-persons/<patient_id>', methods=['OPTIONS'])
+def options_known_persons(patient_id):
+    response = jsonify({'status': 'success'})
+    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,x-auth-token')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
+    return response
+
+@app.route('/api/known-person-ids/<patient_id>', methods=['OPTIONS'])
+def options_known_person_ids(patient_id):
+    response = jsonify({'status': 'success'})
+    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,x-auth-token')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
+    return response
 
 # Basic route for testing
 @app.route('/', methods=['GET'])
@@ -245,6 +278,63 @@ def update_known_persons():
         print(f"Error in update_known_persons: {str(e)}")
         print(traceback.format_exc())
         return jsonify({'message': f'Error updating known persons: {str(e)}'}), 500
+    
+@app.route('/api/known-person-ids/<patient_id>', methods=['GET'])
+@token_required
+def get_known_person_ids(current_user_id, patient_id):
+    try:
+        # Log the request for debugging
+        print(f"Fetching known person IDs for patient: {patient_id}")
+        
+        # Query all known persons for the given patient_id
+        known_persons = KnownPerson.objects(patient_id=patient_id)
+        
+        # Count the results for logging
+        count = len(known_persons)
+        print(f"Found {count} known persons for patient {patient_id}")
+        
+        # Extract just the IDs
+        known_person_ids = [str(person.id) for person in known_persons]
+        
+        # Return the list of IDs
+        return jsonify({
+            'status': 'success',
+            'count': count,
+            'known_person_ids': known_person_ids
+        }), 200
+    except Exception as e:
+        import traceback
+        print(f"Error retrieving known person IDs: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({
+            'status': 'error',
+            'message': f'Error retrieving known person IDs: {str(e)}'
+        }), 500
+
+@app.route('/api/known-persons/<patient_id>', methods=['GET'])
+@token_required
+def get_known_persons(current_user_id, patient_id):
+    try:
+        # Verify that the requesting user is authorized to access this patient's data
+        # (Optional: You might want to check if current_user_id matches patient_id)
+        
+        # Query all known persons for the given patient_id
+        known_persons = KnownPerson.objects(patient_id=patient_id)
+        print(known_persons)
+        # Return the list of known persons
+        return jsonify({
+            'status': 'success',
+            'known_persons': [person.to_json() for person in known_persons]
+        }), 200
+    except Exception as e:
+        import traceback
+        print(f"Error retrieving known persons: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({
+            'status': 'error',
+            'message': f'Error retrieving known persons: {str(e)}'
+        }), 500
+
 
 if __name__ == '__main__':
     port = 5000

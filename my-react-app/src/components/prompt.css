@@ -1,0 +1,65 @@
+/* ConversationSummary.css */
+
+.container {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  }
+  
+  /* Add some animation for loading state */
+  @keyframes pulse {
+    0% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+  
+  .animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  /* Improve readability of the conversation text */
+  .conversation-text {
+    line-height: 1.6;
+    font-size: 1rem;
+  }
+  
+  /* Style for highlighting the current date */
+  .current-date {
+    background-color: rgba(59, 130, 246, 0.1);
+    border-left: 3px solid rgb(59, 130, 246);
+  }
+  
+  /* Custom scrollbar for message containers */
+  .overflow-auto::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  .overflow-auto::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+  }
+  
+  .overflow-auto::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 4px;
+  }
+  
+  .overflow-auto::-webkit-scrollbar-thumb:hover {
+    background: #a0aec0;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 640px) {
+    .container {
+      padding: 0.5rem;
+    }
+    
+    .flex-col {
+      row-gap: 0.5rem;
+    }
+  }
